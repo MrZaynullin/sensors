@@ -1,0 +1,31 @@
+<div class="gridster">
+  <ul>
+    <li data-row="1" data-col="1" data-sizex="2" data-sizey="1">
+      <div id="DR1-CHEL1" data-id="DR1-CHEL1" data-view="Sensors" data-title="DR1-CHEL1"></div>
+    </li>
+    <li data-row="1" data-col="2" data-sizex="2" data-sizey="1">
+      <div id="DR1-CHEL2" data-id="DR1-CHEL2" data-view="Sensors" data-title="DR1-CHEL2"></div>
+    </li>
+    <li data-row="2" data-col="1" data-sizex="2" data-sizey="1">
+      <div id="DR1-CHEL3" data-id="DR1-CHEL3" data-view="Sensors" data-title="DR1-CHEL3"></div>
+    </li>
+    <li data-row="2" data-col="2" data-sizex="2" data-sizey="1">
+      <div id="DR2-CHEL3" data-id="DR2-CHEL3" data-view="Sensors" data-title="DR2-CHEL3"></div>
+    </li>
+    <li data-row="3" data-col="1" data-sizex="2" data-sizey="1">
+      <div id="DR2-CHEL4" data-id="DR2-CHEL4" data-view="Sensors" data-title="DR2-CHEL4"></div>
+    </li>
+    <li data-row="4" data-col="1" data-sizex="2" data-sizey="1">
+      <div id="DR1-CHEL5" data-id="DR1-CHEL5" data-view="Sensors" data-title="DR1-CHEL5"></div>
+    </li>
+    <li data-row="4" data-col="2" data-sizex="2" data-sizey="1">
+      <div id="DR2-CHEL5" data-id="DR2-CHEL5" data-view="Sensors" data-title="DR2-CHEL5"></div>
+    </li>
+    <li data-row="5" data-col="1" data-sizex="2" data-sizey="1">
+      <div id="DR1-CHEL7" data-id="DR1-CHEL7" data-view="Sensors" data-title="DR1-CHEL7"></div>
+    </li>
+    <li data-row="5" data-col="2" data-sizex="2" data-sizey="1">
+      <div id="DR1-MIASS1" data-id="DR1-MIASS1" data-view="Sensors" data-title="DR1-MIASS1"></div>
+    </li>
+  </ul>
+</div>

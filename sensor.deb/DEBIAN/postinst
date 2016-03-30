@@ -1,0 +1,13 @@
+#!/bin/bash
+/usr/bin/pip install pyping
+/usr/bin/pip install dnspython
+/usr/bin/pip install pyroute2
+/usr/bin/pip install py-zabbix
+/usr/bin/pip install simplejson
+/usr/bin/pip install cx_Oracle
+/usr/bin/pip install lldpy
+/usr/bin/pip install configparser
+/sbin/ldconfig
+/etc/init.d/sensor start
+/usr/sbin/update-rc.d sensor defaults
+/usr/sbin/update-rc.d sensor enable

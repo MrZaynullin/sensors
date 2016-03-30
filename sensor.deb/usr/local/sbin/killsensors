@@ -1,0 +1,8 @@
+#!/bin/bash
+
+/usr/bin/killall -s 9 sensors
+
+for i in $(/bin/ip netns)
+do 
+	/bin/ip netns del $i
+done

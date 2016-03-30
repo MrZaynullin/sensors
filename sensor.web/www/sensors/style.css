@@ -1,0 +1,35 @@
+body {
+	background-color: #2C2D2D;
+}
+
+div {
+	background-color: #D0F0E0;
+}
+
+table {
+	width: 100%;
+	text-align: center;
+	border: hidden;
+	border-collapse: collapse;
+}
+
+th {
+	border: 2px solid black;
+	font-family: Tahoma;
+	font-size: 16px;
+	color: #090C07;
+}
+
+td {
+	border: 2px solid black;
+	font-family: Tahoma;
+	font-size: 16px;
+	color: #090C07;
+}
+
+#dashboard {
+	overflow: auto;
+	margin: auto;
+	position: absolute;
+	top: 2%; left: 0; bottom: 2%; right: 0;
+}

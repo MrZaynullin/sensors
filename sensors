@@ -1,0 +1,19 @@
+#!/usr/bin/python
+# -*- coding: utf8 -*-
+
+import sensor
+import signal
+import logging
+
+if __name__ == "__main__":
+	logging.basicConfig(
+		format = "%(levelname)-8s [%(asctime)s] %(message)s",
+		level = logging.INFO,
+		filename = "/var/log/sensors.log"
+	)
+
+	s = sensor.Sensor(conffile='/etc/stm/sensors.conf')
+	s.create()
+	signal.signal(signal.SIGINT, s.kill)
+	signal.signal(signal.SIGTERM, s.kill)
+	s.start()

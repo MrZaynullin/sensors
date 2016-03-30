@@ -1,0 +1,13 @@
+DB = 
+  (DESCRIPTION = 
+    (ADDRESS_LIST = 
+      (ADDRESS = 
+        (PROTOCOL = TCP)
+        (HOST = database.example.ru)
+        (PORT = 1521)
+      )
+    )
+    (CONNECT_DATA = 
+      (SID = MAIN)
+    )
+  )

@@ -1,0 +1,4 @@
+#!/bin/bash
+/etc/init.d/sensor stop
+/usr/sbin/update-rc.d sensor disable
+/usr/sbin/update-rc.d sensor remove

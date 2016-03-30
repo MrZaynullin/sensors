@@ -1,0 +1,9 @@
+Package: sensor
+Version: 2.1-25
+Maintainer: Zaynullin Ildar <zaynullin.ildar@gmail.com>
+Architecture: all
+Section: net
+Depends: vlan, bridge-utils, python-pip, python-pycurl, python-libtorrent, libaio1, oracle-instantclient12.1-basiclite, oracle-instantclient12.1-devel, build-essential, python-dev, libffi-dev
+Priority: optional
+Description: Network Sensors
+ Networking services monitoring daemon.

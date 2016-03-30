@@ -1,0 +1,52 @@
+// ----------------------------------------------------------------------------
+// Sass declarations
+// ----------------------------------------------------------------------------
+$background-color:     #D0F0E0;
+$title-color:          #090C07;
+$moreinfo-color:       #090C07;
+$update-at-color:      #090C07;
+$td-color:             #090C07;
+$th-color:             #090C07;
+
+// ----------------------------------------------------------------------------
+// Widget-dev styles
+// ----------------------------------------------------------------------------
+.widget-dev {
+
+  background-color: $background-color;
+  vertical-align: top;
+
+  .title {
+    color: $title-color;
+    font-size: 24px;
+  }
+
+  .more-info {
+    color: $moreinfo-color;
+  }
+
+  .updated-at {
+    color: $update-at-color;
+  }
+
+  table {
+   width: 100%;
+   border: hidden;
+  }
+
+  th {
+   border: 2px solid black;
+   font-family: Tahoma;
+   font-size: 16px;
+   color: $th-color;
+  }
+
+  td {
+   border: 2px solid black;
+   border-bottom-style: hidden;
+   font-family: Tahoma;
+   font-size: 16px;
+   color: $td-color;
+  }
+
+}

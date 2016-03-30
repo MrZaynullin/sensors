@@ -1,0 +1,14 @@
+/var/log/sensors.log
+/var/log/sensors_rzs_ZV.log
+/var/log/sensors_rzs_ZVNAT.log
+{
+        rotate 30
+        size=1M
+        daily
+        missingok
+        notifempty
+        compress
+        delaycompress
+        copytruncate
+        nomail
+}

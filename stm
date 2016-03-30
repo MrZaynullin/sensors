@@ -1,0 +1,412 @@
+#!/bin/bash
+# Services Test Manager
+
+help_message=$( cat << EOF
+Usage: $0 [OPTION]
+
+    OPTION: 
+create [SERVICE] N M                       create network namespaces in range from N to M, apply SERVICE to range
+                                           network namespaces range geting ip addresses by dhcp
+
+create [SERVICE] N [nodhcp | VPN_TYPE]     create network namespace with number N, apply SERVICE to namespace
+                                           if uses [nodhcp] flag network namespace will not get ip address by dhcp
+                                           if uses [VPN_TYPE] flag vpn session will be setup in network namespace
+
+destroy N M                                destroy network namespaces in range from N to M
+
+destroy N                                  destroy network namespace with number N
+
+info [ALL | N M]                           display statistics for all namespaces or for namespaces in range from N to M
+
+info N                                     display statistics for namespace with number N
+
+help                                       display this message and exit
+
+
+    SERVICE = [ZV | ZVNAT | HN | LL | BLOCK | CORPORATE | WIFI]
+    VPN_TYPE = [UNLIM | PAYS]
+
+EOF
+)
+
+# SERVICE BRIDGES
+ZV_BR="ZV-BR"
+ZVNAT_BR="ZVNAT-BR"
+HN_BR="HN-BR"
+LL_BR="LL-BR"
+BLOCK_BR="BLOCK-BR"
+CORPORATE_BR="CORP-BR"
+WIFI_BR="WIFI-BR"
+
+# Function check if first agrument is SERVICE = [ZV | ZVNAT | HN | LL | BLOCK | CORPORATE | WIFI]
+function if_service {
+	if [[ $1 == "ZV" || $1 == "ZVNAT" || $1 == "HN" || $1 == "LL" || $1 == "BLOCK" || $1 == "CORPORATE" || $1 == "WIFI" ]]
+	then
+		return 0
+	else
+		return 1
+	fi
+}
+
+# Function check if first agrument is VPN_TYPE = [UNLIM | PAYS]
+function if_vpn_type {
+	if [[ $1 == "UNLIM" || $1 == "PAYS" ]]
+	then
+		return 0
+	else
+		return 1
+	fi
+}
+
+# Function check if namespace exist
+# First argument: name of namespace
+function if_ns_exist {
+	if (( $# != 1 ))
+	then
+		echo "[DEBUG] Wrong argument count in function if_ns_exist"
+		exit 1
+	fi
+
+	/bin/ip netns show | grep $1 2>&1 > /dev/null
+
+	return $?
+}
+
+# Function switch namespace to service
+# First argument: name of namespace
+# Second argument: SERVICE
+function switch_to_service {
+	if (( $# != 2 ))
+	then
+		echo "[DEBUG] Wrong argument count in function switch_to_service"
+		exit 1
+	fi
+
+	if ! if_service $2
+	then
+		echo "[DEBUG] Wrong argument $2 in function switch_to_service"
+		exit 1
+	fi
+
+	case $2 in
+		"ZV")
+			/sbin/brctl addif $ZV_BR veth0$1
+			;;
+		"ZVNAT")
+			/sbin/brctl addif $ZVNAT_BR veth0$1
+			;;
+		"HN")
+			/sbin/brctl addif $HN_BR veth0$1
+			;;
+		"LL")
+			/sbin/brctl addif $LL_BR veth0$1
+			;;
+		"BLOCK")
+			/sbin/brctl addif $BLOCK_BR veth0$1
+			;;
+		"CORPORATE")
+			/sbin/brctl addif $CORPORATE_BR veth0$1
+			;;
+		"WIFI")
+			/sbin/brctl addif $WIFI_BR veth0$1
+			;;
+	esac	
+}
+
+# Function create network namespace
+# First argument: name of namespace
+# Second argument: SERVICE, switch namespace to SERVICE
+# Third argunemt optional: [dhcp] use dhcp in namespace or not
+function create_namespace {
+	if (( $# != 2 && $# != 3 ))
+	then
+		echo "[DEBUG] Wrong argument count in function create_namespace"
+		exit 1
+	fi
+
+	if if_ns_exist $1
+	then
+		echo "Error: Can't create namespace $1. Namespace is exist"
+		exit 1
+	fi
+
+	if ! if_service $2
+	then
+		echo "[DEBUG] Wrong argument $2 in function create_namespace"
+		exit 1
+	fi
+
+	if [[ $3 != "" && $3 != "dhcp" ]]
+	then
+		echo "[DEBUG] Wrong argument $3 in function create_namespace"
+		exit 1
+	fi
+
+	/bin/ip netns add $1
+	/bin/ip netns exec $1 ip link set up dev lo
+	/bin/ip link add veth0$1 type veth peer name veth1$1
+	/bin/ip link set veth1$1 netns $1
+	/bin/ip link set dev veth0$1 up
+	/bin/ip netns exec $1 ip link set up dev veth1$1
+	switch_to_service $1 $2 
+
+	if [[ $3 == "dhcp" ]]
+	then
+		/bin/ip netns exec $1 dhclient --no-pid veth1$1
+	fi
+}
+
+# Function destroy network namespace
+# Firts argument: name of namespace
+function destroy_namespace {
+	if (( $# != 1 ))
+	then
+		echo "[DEBUG] Wrong argument count in function destroy_namespace"
+		exit 1
+	fi
+
+	if ! if_ns_exist $1
+	then
+		echo "Warning: Can't destroy namespace $1. Namespace not exist"
+	else
+		service_br=$(/bin/ip addr show dev veth0$1 | grep -oP "(?<=master )[A-Za-z-]*")
+		dhclient_pid=$(/bin/ps aux | grep -w "veth1$1" | grep dhclient | /usr/bin/awk '{print $2}')
+
+		if [[ $dhclient_pid != "" ]]
+		then
+			/bin/kill -9 $dhclient_pid
+		fi
+
+		ppp_interface=$(/bin/ip netns exec $1 ip addr show | grep -o "ppp.*:")
+
+		if [[ $ppp_interface != "" ]]
+		then
+			if_unlim=$(echo $ppp_interface | grep "ppp0")
+
+			if [[ $if_unlim != "" ]]
+			then
+				/bin/ip netns exec $1 poff unlim
+			fi
+
+			if_pays=$(echo $ppp_interface | grep "ppp1")
+
+			if [[ $if_pays != "" ]]
+			then
+				/bin/ip netns exec $1 poff pays
+			fi
+		fi
+
+		/sbin/brctl delif $service_br veth0$1
+		/bin/ip link del dev veth0$1
+		/bin/ip netns del $1
+	fi
+}
+
+# Finction return network namespace ip address
+# First argument: name of namespace
+function get_ns_ipaddr {
+	if (( $# != 1 ))
+	then
+		echo "[DEBUG] Wrong argument count in function get_ns_ipaddr"
+		exit 1
+	fi
+
+	ip=$(/bin/ip netns exec $1 ip -4 addr show veth1$1 | grep inet | cut -f 6 -d" ")
+
+	echo $ip
+}
+
+# Finction return network namespace service
+# First argument: name of namespace
+function get_ns_service {
+	if (( $# != 1 ))
+	then
+		echo "[DEBUG] Wrong argument count in function get_ns_service"
+		exit 1
+	fi
+
+	service_br=$(/bin/ip addr show dev veth0$1 | grep -oP "(?<=master )[A-Za-z-]*")
+	service=""
+
+	case $service_br in
+		$ZV_BR)
+			service="ZV"
+			;;
+		$ZVNAT_BR)
+			service="ZVNAT"
+			;;
+		$HN_BR)
+			service="HN"
+			;;
+		$LL_BR)
+			service="LL"
+			;;
+		$BLOCK_BR)
+			service="BLOCK"
+			;;
+		$CORPORATE_BR)
+			service="CORPORATE"
+			;;
+		$WIFI_BR)
+			service="WIFI"
+			;;
+	esac
+
+	echo $service
+}
+
+# Finction return network namespace vpn type
+# First argument: name of namespace
+function get_ns_vpn_type {
+	if (( $# != 1 ))
+	then
+		echo "[DEBUG] Wrong argument count in function get_ns_vpn_type"
+		exit 1
+	fi
+
+	ppp_interface=$(/bin/ip netns exec $1 ip addr show | grep -o "ppp.*:")
+	ppp_interface=${ppp_interface%?}
+
+	if [[ $ppp_interface =~ "ppp0" ]]
+	then
+		address=$(/bin/ip netns exec $1 ip addr show $ppp_interface | grep "inet" | awk '{print $2}')
+		echo "vpn type = UNLIM, ip = $address"
+
+	elif [[ $ppp_interface =~ "ppp1" ]]
+	then
+		address=$(/bin/ip netns exec $1 ip addr show $ppp_interface | grep "inet" | awk '{print $2}')
+		echo "vpn type = PAYS, ip = $address"
+
+	else
+		echo ""
+	fi
+}
+
+if [[ $# == 0 || ( $# == 1 && $1 == "help" ) ]]
+then
+	echo "$help_message"
+
+elif [[ $# == 3 && $1 == "create" && $3 =~ ^[1-9][0-9]*$ ]] && if_service $2
+then
+	dhcp_time=$( (time create_namespace ns$3 $2 "dhcp") |& grep "real" | /usr/bin/awk '{print $2}' )
+	echo "Create namespace: ns$3 ($dhcp_time)"
+
+elif [[ $# == 4 && $1 == "create" && $3 =~ ^[1-9][0-9]*$ && $4 == "nodhcp" ]] && if_service $2
+then
+	create_namespace ns$3 $2 
+	echo "Create namespace: ns$3"
+
+elif [[ $# == 4 && $1 == "create" && $3 =~ ^[1-9][0-9]*$ ]] && if_service $2 && if_vpn_type $4
+then
+	dhcp_time=$( (time create_namespace ns$3 $2 "dhcp") |& grep "real" | /usr/bin/awk '{print $2}' )
+	echo "Create namespace: ns$3 ($dhcp_time)"
+
+	if [[ $4 == "UNLIM" ]]
+	then
+		/bin/ip netns exec ns$3 ip route add default dev veth1ns$3
+		/bin/ip netns exec ns$3 pon unlim ifname ppp0ns$3
+	elif [[ $4 == "PAYS" ]]
+	then
+		/bin/ip netns exec ns$3 ip route add default dev veth1ns$3
+		/bin/ip netns exec ns$3 pon pays ifname ppp1ns$3
+	fi
+
+elif [[ $# == 4 && $1 == "create" && $3 =~ ^[1-9][0-9]*$ && $4 =~ ^[1-9][0-9]*$ ]] && if_service $2
+then
+	if (( $3 >= $4 ))
+	then
+		echo "Error: wrong range, $3 greater then $4"
+		exit 1
+	fi
+
+	echo "Create namespaces: "
+
+	for i in $(seq $3 $4)
+	do
+		dhcp_time=$( (time create_namespace ns$i $2 "dhcp") |& grep "real" | /usr/bin/awk '{print $2}' )
+		echo -n "ns$i ($dhcp_time) "
+	done
+
+	echo ""
+
+elif [[ $# == 2 && $1 == "destroy" && $2 =~ ^[1-9][0-9]*$ ]]
+then
+	destroy_namespace ns$2
+	echo "Destroy namespace: ns$2"
+
+elif [[ $# == 3 && $1 == "destroy" && $2 =~ ^[1-9][0-9]*$ && $3 =~ ^[1-9][0-9]*$ ]]
+then
+	if (( $2 >= $3 ))
+	then
+		echo "Error: wrong range, $2 greater then $3"
+		exit 1
+	fi
+
+	echo "Destroy namespaces: "
+
+	for i in $(seq $2 $3)
+	do
+		destroy_namespace ns$i
+		sleep 0.25
+
+		echo -n "ns$i "
+	done
+
+	echo ""
+
+elif [[ $# == 2 && $1 == "info" && ( $2 =~ ^[1-9][0-9]*$ || $2 == "ALL" ) ]]
+then
+	if [[ $2 == "ALL" ]]
+	then
+		for i in $(/bin/ip netns show)
+		do
+			ip=$(get_ns_ipaddr $i)
+			service=$(get_ns_service $i)
+			vpn_type=$(get_ns_vpn_type $i)
+
+			if [[ $vpn_type != "" ]]
+			then
+				echo "Namespace $i : ip = $ip, service = $service, $vpn_type"
+			else
+				echo "Namespace $i : ip = $ip, service = $service"
+			fi
+		done
+	else
+		ip=$(get_ns_ipaddr ns$2)
+		service=$(get_ns_service ns$2)
+		vpn_type=$(get_ns_vpn_type ns$2)
+
+		if [[ $vpn_type != "" ]]
+		then
+			echo "Namespace ns$2 : ip = $ip, service = $service, $vpn_type"
+		else
+			echo "Namespace ns$2 : ip = $ip, service = $service"
+		fi
+	fi
+
+elif [[ $# == 3 && $1 == "info" && $2 =~ ^[1-9][0-9]*$ && $3 =~ ^[1-9][0-9]*$ ]]
+then
+	if (( $2 >= $3 ))
+	then
+		echo "Error: wrong range, $2 greater then $3"
+		exit 1
+	fi
+
+	for i in $(seq $2 $3)
+	do
+		ip=$(get_ns_ipaddr ns$i)
+		service=$(get_ns_service ns$i)
+		vpn_type=$(get_ns_vpn_type ns$i)
+
+		if [[ $vpn_type != "" ]]
+		then
+			echo "Namespace ns$i : ip = $ip, service = $service, $vpn_type"
+		else
+			echo "Namespace ns$i : ip = $ip, service = $service"
+		fi
+	done
+
+else
+	echo "$help_message"
+	exit 1
+fi
